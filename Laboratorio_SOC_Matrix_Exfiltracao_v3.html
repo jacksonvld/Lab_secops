@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Be Safe Academy | Matrix SOC - Exfiltração de Dados</title>
+<style>
+:root {
+  --bg:#000;
+  --panel:rgba(0,18,8,.84);
+  --green:#39ff6a;
+  --dim:#8bd999;
+  --line:rgba(57,255,106,.48);
+  --red:#ff4d3d;
+  --amber:#ffcc66;
+  --text:#d5ffd9;
+  --shadow:0 0 24px rgba(0,255,80,.2), inset 0 0 24px rgba(0,255,80,.05);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#000;color:var(--text);font-family:"Courier New",monospace;overflow-x:hidden}
+#matrixRain{position:fixed;inset:0;z-index:0;opacity:.9;pointer-events:none}
+.matrix-bg{position:fixed;inset:0;background:radial-gradient(circle at 50% 20%,rgba(0,255,90,.08),transparent 30%),linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.86));z-index:1;pointer-events:none}
+.scanlines{position:fixed;inset:0;pointer-events:none;z-index:8;background:repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0,rgba(255,255,255,.035) 1px,transparent 1px,transparent 4px);mix-blend-mode:overlay}
+.app{position:relative;z-index:2;padding:18px;max-width:1760px;margin:0 auto}
+.top{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;margin-bottom:14px}
+.brand,.mission,.panel{border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow);border-radius:14px}
+.brand{padding:22px}
+.brand small{color:var(--dim);font-size:18px}
+.brand h1{font-size:clamp(34px,4vw,72px);line-height:.9;margin:8px 0;color:var(--green);text-shadow:0 0 18px rgba(57,255,106,.72);font-weight:700}
+.brand h2{font-size:clamp(18px,2vw,32px);margin:0;color:var(--green);font-weight:400}
+.mission{padding:18px;line-height:1.45}
+.mission b{color:var(--green)}
+.layout{display:grid;grid-template-columns:330px minmax(620px,1fr) 410px;gap:14px}
+.panel{padding:14px;min-height:80px}
+.panel h3{margin:0 0 12px;color:var(--green);font-size:22px;font-weight:400;border-bottom:1px solid rgba(57,255,106,.25);padding-bottom:8px}
+.side p,.side li{color:var(--dim);line-height:1.45}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.metric{border:1px solid rgba(57,255,106,.3);background:rgba(0,20,8,.55);padding:12px;border-radius:12px}
+.metric span{display:block;color:var(--dim);font-size:12px}
+.metric b{font-size:22px;color:var(--green)}
+.toolbar{display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:8px;margin-bottom:10px}
+input,select,textarea{width:100%;padding:12px;background:#020b04;border:1px solid var(--line);border-radius:12px;color:var(--green);font:inherit;outline:none}
+.btn{cursor:pointer;border:1px solid var(--line);background:linear-gradient(180deg,rgba(0,80,25,.78),rgba(0,25,8,.88));color:var(--green);font:inherit;border-radius:12px;padding:12px 18px;box-shadow:0 0 12px rgba(57,255,106,.18);transition:.2s}
+.btn:hover{filter:brightness(1.35);box-shadow:0 0 22px rgba(57,255,106,.35)}
+.table-wrap{height:540px;overflow:auto;border:1px solid rgba(57,255,106,.28);border-radius:12px;background:rgba(0,4,2,.78)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{position:sticky;top:0;background:#041407;color:var(--green);z-index:1;text-align:left;padding:10px;border-bottom:1px solid var(--line)}
+td{padding:8px 10px;border-bottom:1px solid rgba(57,255,106,.13);vertical-align:top}
+tr{cursor:pointer}
+tr:hover{background:rgba(57,255,106,.08)}
+tr.selected{outline:1px solid var(--green);background:rgba(57,255,106,.16)}
+.sev-baixo{color:#8bd999}.sev-médio{color:var(--amber)}.sev-alto,.sev-crítico{color:var(--red)}
+.badge{display:inline-block;border:1px solid currentColor;border-radius:999px;padding:2px 8px;font-size:12px}
+.box{border:1px solid rgba(57,255,106,.3);border-radius:12px;padding:12px;background:rgba(0,12,5,.64);margin:10px 0}
+.terminal{height:185px;overflow:auto;background:#000;border:1px solid rgba(57,255,106,.35);border-radius:12px;padding:12px;color:var(--green);font-size:13px;line-height:1.45}
+.detail{font-size:13px;line-height:1.5;color:var(--dim);white-space:pre-wrap}
+.question{border:1px solid rgba(57,255,106,.3);border-radius:12px;padding:12px;margin:10px 0;background:rgba(0,12,5,.7)}
+.question summary{cursor:pointer;color:var(--green);line-height:1.35}
+.question p{color:var(--dim)}
+.answer{display:none;margin-top:8px;color:#d5ffd9;border-top:1px solid rgba(57,255,106,.2);padding-top:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kbd{border:1px solid rgba(57,255,106,.35);background:#000;border-radius:8px;padding:8px;color:var(--green);display:inline-block;margin:3px 0}
+
+.audio-hud{position:fixed;right:14px;top:14px;z-index:40;display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:999px;background:rgba(0,10,3,.88);padding:8px 10px;box-shadow:var(--shadow)}
+.audio-hud button{width:42px;height:36px;border-radius:999px;padding:0}
+.audio-hud input{accent-color:#39ff6a;width:92px}
+.audio-title{color:var(--dim);font-size:12px;white-space:nowrap}
+@media(max-width:700px){.audio-hud{position:relative;right:auto;top:auto;margin:10px auto;width:fit-content}}
+
+@media(max-width:1150px){.top,.layout{grid-template-columns:1fr}.toolbar{grid-template-columns:1fr 1fr}.metrics{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.app{padding:10px}.toolbar,.metrics,.grid2{grid-template-columns:1fr}table{font-size:12px}td,th{padding:7px}}
+</style>
+</head>
+<body>
+<canvas id="matrixRain"></canvas>
+<div class="matrix-bg"></div>
+<div class="scanlines"></div>
+
+<audio id="bgAudio" loop preload="auto">
+  <source src="rock_cyber_loop.wav" type="audio/wav">
+</audio>
+<div class="audio-hud">
+  <span class="audio-title">CYBER ROCK</span>
+  <button class="btn" id="audioBtn" title="Tocar/Pausar música">▶</button>
+  <input id="vol" type="range" min="0" max="1" step="0.05" value="0.35" title="Volume">
+</div>
+
+
+<div class="app">
+  <section class="top">
+    <div class="brand">
+      <small>BE SAFE ACADEMY | LAB SOC</small>
+      <h1>MATRIX</h1>
+      <h2>Investigação de Exfiltração de Dados</h2>
+    </div>
+    <div class="mission">
+      <b>Missão:</b> investigar a base de logs, identificar a origem do ataque, o destino, o horário de início, o volume aproximado transferido e classificar o incidente.
+      <br><br>
+      <b>Objetivo pedagógico:</b> guiar o aluno por uma estratégia real de investigação, do indício inicial até a conclusão do ataque.
+    </div>
+  </section>
+
+  <section class="layout">
+    <aside class="panel side">
+      <h3>Roteiro de Investigação</h3>
+      <ol>
+        <li>Identifique comportamentos fora do padrão.</li>
+        <li>Determine o host suspeito.</li>
+        <li>Monte a linha do tempo.</li>
+        <li>Separe tráfego interno de externo.</li>
+        <li>Localize uploads volumosos.</li>
+        <li>Calcule o volume aproximado.</li>
+        <li>Classifique o incidente.</li>
+      </ol>
+      <div class="box">
+        <b>Ativos internos</b><br>
+        <span class="kbd">10.10.10.5</span> DC01<br>
+        <span class="kbd">10.10.10.20</span> Estação de usuário<br>
+        <span class="kbd">10.10.10.25</span> Servidor de arquivos
+      </div>
+      <div class="terminal" id="terminal">
+        > sistema iniciado...<br>
+        > carregando base de logs...<br>
+        > ambiente Matrix SOC pronto para investigação.<br>
+      </div>
+    </aside>
+
+    <main class="panel">
+      <h3>Base de Logs Filtrável</h3>
+      <div class="metrics">
+        <div class="metric"><span>Total de logs</span><b id="mTotal">0</b></div>
+        <div class="metric"><span>Exibidos</span><b id="mShown">0</b></div>
+        <div class="metric"><span>Críticos</span><b id="mCrit">0</b></div>
+        <div class="metric"><span>Bytes filtrados</span><b id="mBytes">0</b></div>
+      </div>
+      <div class="toolbar">
+        <input id="q" placeholder="Filtro livre: IP, protocolo, porta, descrição, severidade...">
+        <select id="src"><option value="">Origem</option></select>
+        <select id="dst"><option value="">Destino</option></select>
+        <select id="proto"><option value="">Protocolo</option></select>
+        <select id="sev"><option value="">Severidade</option><option>BAIXO</option><option>MÉDIO</option><option>ALTO</option><option>CRÍTICO</option></select>
+      </div>
+      <div class="grid2" style="margin-bottom:10px">
+        
+        
+        
+        <button class="btn" onclick="resetFilters()">Limpar filtros</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Data/Hora</th><th>Fonte</th><th>Ação</th><th>Proto</th><th>Origem</th><th>Destino</th><th>Porta</th><th>Bytes</th><th>Descrição</th><th>Sev.</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </main>
+
+    <aside class="panel">
+      <h3>Painel de Análise</h3>
+      <div class="box">
+        <b>Log selecionado</b>
+        <div class="detail" id="detail">Clique em uma linha da tabela para ver os detalhes.</div>
+      </div>
+      <h3>7 Perguntas do Aluno</h3>
+      <div id="questions"></div>
+      <button class="btn" disabled>Gabarito indisponível para o aluno</button>
+    </aside>
+  </section>
+</div>
+
+<script>
+const logs = [["2026-06-03 08:00:12", "FIREWALL", "ALLOW", "TCP", "10.10.10.34", "172.217.29.78", "443", "4432", "Navegação HTTPS comum", "BAIXO"], ["2026-06-03 08:01:44", "DNS", "ALLOW", "UDP", "10.10.10.44", "8.8.8.8", "53", "118", "Consulta DNS comum", "BAIXO"], ["2026-06-03 08:02:15", "FIREWALL", "ALLOW", "TCP", "10.10.10.20", "10.10.10.5", "389", "1540", "Consulta LDAP ao controlador de domínio", "MÉDIO"], ["2026-06-03 08:03:11", "FIREWALL", "ALLOW", "TCP", "10.10.10.20", "10.10.10.25", "445", "25234", "Acesso SMB ao servidor de arquivos", "MÉDIO"], ["2026-06-03 08:04:05", "FIREWALL", "ALLOW", "TCP", "10.10.10.20", "10.10.10.25", "445", "45877", "Acesso SMB ao servidor de arquivos", "MÉDIO"], ["2026-06-03 08:04:48", "FIREWALL", "ALLOW", "TCP", "10.10.10.20", "10.10.10.25", "445", "64892", "Acesso SMB ao servidor de arquivos", "MÉDIO"], ["2026-06-03 08:05:20", "FIREWALL", "ALLOW", "TCP", "10.10.10.20", "10.10.10.25", "445", "73510", "Coleta provável de arquivos internos via SMB", "ALTO"], ["2026-06-03 08:06:14", "PROXY", "ALLOW", "TCP", "10.10.10.20", "177.54.101.200", "443", "2456", "Primeiro contato externo incomum", "ALTO"], ["2026-06-03 08:06:18", "PROXY", "ALLOW", "TCP", "10.10.10.20", "177.54.101.200", "443", "2689", "Conexão externa repetida", "ALTO"], ["2026-06-03 08:06:22", "PROXY", "ALLOW", "TCP", "10.10.10.20", "177.54.101.200", "443", "3012", "Conexão externa repetida", "ALTO"], ["2026-06-03 08:08:39", "ENDPOINT", "ALLOW", "PROCESS", "10.10.10.20", "LOCAL", "0", "0", "powershell.exe iniciado pelo usuário j.silva", "ALTO"], ["2026-06-03 08:09:20", "ENDPOINT", "ALLOW", "FILE", "10.10.10.20", "LOCAL", "0", "0", "Arquivo clientes.zip criado em C:\\Users\\j.silva\\AppData\\Temp", "CRÍTICO"], ["2026-06-03 08:10:05", "PROXY", "ALLOW", "TCP", "10.10.10.20", "177.54.101.200", "443", "105345678", "Upload volumoso para destino externo", "CRÍTICO"], ["2026-06-03 08:11:15", "PROXY", "ALLOW", "TCP", "10.10.10.20", "177.54.101.200", "443", "214567892", "Upload volumoso para destino externo", "CRÍTICO"], ["2026-06-03 08:12:28", "PROXY", "ALLOW", "TCP", "10.10.10.20", "177.54.101.200", "443", "325781244", "Upload volumoso para destino externo", "CRÍTICO"], ["2026-06-03 08:13:41", "PROXY", "ALLOW", "TCP", "10.10.10.20", "177.54.101.200", "443", "418214892", "Upload volumoso para destino externo", "CRÍTICO"], ["2026-06-03 08:15:02", "PROXY", "ALLOW", "TCP", "10.10.10.20", "177.54.101.200", "443", "526481113", "Upload volumoso para destino externo", "CRÍTICO"], ["2026-06-03 08:16:33", "FIREWALL", "ALLOW", "ICMP", "10.10.10.20", "177.54.101.200", "0", "84", "Teste ICMP para o destino externo", "MÉDIO"], ["2026-06-03 08:18:11", "PROXY", "ALLOW", "TCP", "10.10.10.30", "172.217.29.78", "443", "3254", "Tráfego web comum", "BAIXO"], ["2026-06-03 08:19:52", "PROXY", "ALLOW", "TCP", "10.10.10.40", "172.217.29.78", "443", "4128", "Tráfego web comum", "BAIXO"], ["2026-06-03 08:20:01", "DNS", "ALLOW", "UDP", "10.10.10.50", "8.8.8.8", "53", "112", "Consulta DNS comum", "BAIXO"], ["2026-06-03 08:22:44", "PROXY", "ALLOW", "TCP", "10.10.10.20", "177.54.101.200", "443", "658321452", "Upload volumoso para destino externo", "CRÍTICO"], ["2026-06-03 08:24:10", "PROXY", "ALLOW", "TCP", "10.10.10.20", "177.54.101.200", "443", "741256987", "Upload volumoso para destino externo", "CRÍTICO"], ["2026-06-03 08:27:45", "PROXY", "ALLOW", "TCP", "10.10.10.20", "177.54.101.200", "443", "852145887", "Upload volumoso para destino externo", "CRÍTICO"], ["2026-06-03 08:29:33", "PROXY", "ALLOW", "TCP", "10.10.10.20", "177.54.101.200", "443", "963451221", "Último upload volumoso observado", "CRÍTICO"], ["2026-06-03 08:35:05", "PROXY", "ALLOW", "TCP", "10.10.10.60", "104.18.32.47", "443", "5220", "Tráfego web comum", "BAIXO"], ["2026-06-03 08:36:14", "PROXY", "ALLOW", "TCP", "10.10.10.70", "151.101.1.69", "443", "7811", "Tráfego web comum", "BAIXO"], ["2026-06-03 08:38:55", "DNS", "ALLOW", "UDP", "10.10.10.80", "8.8.4.4", "53", "90", "Consulta DNS comum", "BAIXO"]];
+const questions = [{"q": "1. Qual host apresenta o comportamento mais suspeito durante a investigação?", "hint": "Procure o ativo com maior quantidade de eventos relevantes e comunicações externas incomuns.", "answer": "10.10.10.20"}, {"q": "2. Qual é a primeira evidência de coleta ou preparação interna antes do vazamento?", "hint": "Observe as conexões internas antes do primeiro contato externo.", "answer": "Acesso do host 10.10.10.20 ao servidor de arquivos 10.10.10.25 pela porta 445/SMB, seguido da criação do arquivo clientes.zip."}, {"q": "3. Qual usuário aparece associado ao host comprometido?", "hint": "Procure eventos de endpoint/processo.", "answer": "j.silva"}, {"q": "4. Em qual horário ocorreu a primeira comunicação externa suspeita?", "hint": "Procure o primeiro destino externo incomum relacionado ao host suspeito.", "answer": "08:06:14, para o IP 177.54.101.200 na porta 443/TCP."}, {"q": "5. Qual foi o principal destino da exfiltração?", "hint": "Procure o IP externo que recebeu múltiplos uploads volumosos.", "answer": "177.54.101.200"}, {"q": "6. Qual foi o volume aproximado de dados transferidos?", "hint": "Some os eventos de upload volumoso marcados como críticos.", "answer": "Aproximadamente 4,8 GB."}, {"q": "7. Com base na linha do tempo, qual tipo de ataque ocorreu e qual foi a cadeia provável?", "hint": "Correlacione acesso interno, criação de arquivo, comunicação externa e uploads volumosos.", "answer": "Exfiltração de dados: acesso interno ao servidor de arquivos, criação de clientes.zip, conexão externa via HTTPS e envio volumoso para 177.54.101.200."}];
+let showAnswers = false;
+
+function bytesHuman(n){
+  n = Number(n)||0;
+  if(n>=1073741824) return (n/1073741824).toFixed(2)+' GB';
+  if(n>=1048576) return (n/1048576).toFixed(1)+' MB';
+  if(n>=1024) return (n/1024).toFixed(1)+' KB';
+  return n+' B';
+}
+
+function populateFilters(){
+  const srcs = [...new Set(logs.map(x=>x[4]))].sort();
+  const dsts = [...new Set(logs.map(x=>x[5]))].sort();
+  const protos = [...new Set(logs.map(x=>x[3]))].sort();
+  for(const v of srcs) src.innerHTML += `<option>${v}</option>`;
+  for(const v of dsts) dst.innerHTML += `<option>${v}</option>`;
+  for(const v of protos) proto.innerHTML += `<option>${v}</option>`;
+}
+
+function rowText(l){return l.join(' ').toLowerCase();}
+
+function render(){
+  const query = q.value.toLowerCase().trim();
+  const fs = src.value, fd = dst.value, fp = proto.value, fv = sev.value;
+  const filtered = logs.filter(l =>
+    (!query || rowText(l).includes(query)) &&
+    (!fs || l[4]===fs) &&
+    (!fd || l[5]===fd) &&
+    (!fp || l[3]===fp) &&
+    (!fv || l[9]===fv)
+  );
+  tbody.innerHTML = '';
+  let bytes = 0;
+  for(const l of filtered){
+    bytes += Number(l[7])||0;
+    const cls = 'sev-' + l[9].toLowerCase().replace('é','e').replace('í','i');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${l[0]}</td><td>${l[1]}</td><td>${l[2]}</td><td>${l[3]}</td><td>${l[4]}</td><td>${l[5]}</td><td>${l[6]}</td><td>${bytesHuman(l[7])}</td><td>${l[8]}</td><td><span class="badge ${cls}">${l[9]}</span></td>`;
+    tr.onclick = () => selectLog(l, tr);
+    tbody.appendChild(tr);
+  }
+  mTotal.textContent = logs.length;
+  mShown.textContent = filtered.length;
+  mCrit.textContent = filtered.filter(x=>x[9]==='CRÍTICO').length;
+  mBytes.textContent = bytesHuman(bytes);
+}
+
+function selectLog(l, tr){
+  [...tbody.querySelectorAll('tr')].forEach(r=>r.classList.remove('selected'));
+  tr.classList.add('selected');
+  detail.textContent =
+`Data/Hora: ${l[0]}
+Fonte: ${l[1]}
+Ação: ${l[2]}
+Protocolo: ${l[3]}
+Origem: ${l[4]}
+Destino: ${l[5]}
+Porta: ${l[6]}
+Bytes: ${bytesHuman(l[7])}
+Severidade: ${l[9]}
+
+Interpretação:
+${l[8]}`;
+  terminal.innerHTML += `<br>> evento selecionado: ${l[0]} ${l[4]} -> ${l[5]}`;
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+function renderQuestions(){
+  questions.forEach((x,i)=>{
+    const d = document.createElement('details');
+    d.className = 'question';
+    d.innerHTML = `<summary>${x.q}</summary><p><b>Dica:</b> ${x.hint}</p><div class="answer"><b>Resposta esperada:</b><br>${x.answer}</div>`;
+    document.getElementById('questions').appendChild(d);
+  });
+}
+
+function toggleAnswers(){
+  showAnswers = !showAnswers;
+  document.querySelectorAll('.answer').forEach(a=>a.style.display = showAnswers ? 'block' : 'none');
+}
+
+function preset(type){
+  resetFilters(false);
+  if(type==='suspect') src.value = '10.10.10.20';
+  if(type==='external') { src.value = '10.10.10.20'; dst.value = '177.54.101.200'; }
+  if(type==='uploads') { src.value = '10.10.10.20'; dst.value = '177.54.101.200'; sev.value = 'CRÍTICO'; }
+  render();
+}
+
+function resetFilters(doRender=true){
+  q.value=''; src.value=''; dst.value=''; proto.value=''; sev.value='';
+  if(doRender) render();
+}
+
+['q','src','dst','proto','sev'].forEach(id=>document.getElementById(id).addEventListener('input', render));
+populateFilters(); render(); renderQuestions();
+
+
+// Audio HUD
+const bgAudio = document.getElementById('bgAudio');
+const audioBtn = document.getElementById('audioBtn');
+const vol = document.getElementById('vol');
+bgAudio.volume = Number(vol.value);
+audioBtn.addEventListener('click', async () => {
+  try {
+    if (bgAudio.paused) {
+      await bgAudio.play();
+      audioBtn.textContent = '⏸';
+      terminal.innerHTML += '<br>> trilha cyber rock ativada.';
+    } else {
+      bgAudio.pause();
+      audioBtn.textContent = '▶';
+      terminal.innerHTML += '<br>> trilha cyber rock pausada.';
+    }
+    terminal.scrollTop = terminal.scrollHeight;
+  } catch(e) {
+    terminal.innerHTML += '<br>> navegador bloqueou autoplay. Clique novamente para iniciar.';
+  }
+});
+vol.addEventListener('input', () => bgAudio.volume = Number(vol.value));
+document.addEventListener('click', async function firstUserInteraction(){
+  document.removeEventListener('click', firstUserInteraction);
+  if (bgAudio.paused) {
+    try {
+      await bgAudio.play();
+      audioBtn.textContent = '⏸';
+      terminal.innerHTML += '<br>> trilha cyber rock ativada automaticamente após interação.';
+      terminal.scrollTop = terminal.scrollHeight;
+    } catch(e) {}
+  }
+});
+
+// Matrix rain
+const canvas = document.getElementById('matrixRain');
+const ctx = canvas.getContext('2d');
+function resize(){canvas.width=innerWidth; canvas.height=innerHeight;}
+resize(); addEventListener('resize', resize);
+const chars = '01アカサタナハマヤラワSOCログ侵害流出DATAEXFILTRATION';
+let fontSize = 16;
+let columns = Math.floor(canvas.width / fontSize);
+let drops = Array(columns).fill(1);
+function draw(){
+  ctx.fillStyle = 'rgba(0,0,0,0.06)';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#39ff6a';
+  ctx.font = fontSize + 'px monospace';
+  columns = Math.floor(canvas.width / fontSize);
+  while(drops.length < columns) drops.push(1);
+  for(let i=0;i<columns;i++){
+    const text = chars[Math.floor(Math.random()*chars.length)];
+    ctx.fillText(text, i*fontSize, drops[i]*fontSize);
+    if(drops[i]*fontSize > canvas.height && Math.random() > .975) drops[i] = 0;
+    drops[i]++;
+  }
+}
+setInterval(draw, 35);
+</script>
+</body>
+</html>
